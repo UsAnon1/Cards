@@ -8,13 +8,14 @@
 :root{--bg:#f4f1ec;--fg:#2b2a33;--muted:#7a7785;--accent:#6c5ce7;--surface:#fff;--line:rgba(43,42,51,.15)}
 @media (prefers-color-scheme:dark){:root{--bg:#17161c;--fg:#f1eff7;--muted:#9a97a8;--accent:#8f82ff;--surface:#24232c;--line:rgba(241,239,247,.18)}}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;justify-content:center}
+body{margin:0;min-height:100vh;min-height:100dvh;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;justify-content:center}
 button,label{font:inherit;cursor:pointer}
 .hidden{display:none!important}
 .app{width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;padding:20px 20px 0}
 header h1{font-size:22px;margin:4px 0 0;text-align:center}
-main{flex:1;display:flex;flex-direction:column;padding-bottom:96px}
+main{flex:1;display:flex;flex-direction:column;padding-bottom:84px}
 section{flex:1;flex-direction:column;display:flex}
+#tab-cartoes{align-items:center}
 .sub{color:var(--muted);font-size:14px;margin:8px 0 16px;text-align:center}
 .empty{text-align:center;color:var(--muted);margin:30% 10px 0}
 
@@ -25,22 +26,29 @@ nav button span{display:block;font-size:20px}
 nav button.on{color:var(--accent);font-weight:600}
 
 /* pilha de cartões */
-.stack{position:relative;flex:1;min-height:420px;margin:18px 0 12px;touch-action:pan-y}
-.card{position:absolute;inset:0;border-radius:24px;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;font-size:26px;line-height:1.35;box-shadow:0 10px 30px rgba(0,0,0,.18);overflow:hidden;user-select:none;cursor:grab;transition:transform .35s ease,opacity .35s ease}
+/* tamanho FIXO do cartão: não muda com o tamanho da janela */
+.stack{position:relative;flex:none;width:320px;height:480px;margin:16px auto 44px}
+.card{position:absolute;inset:0;border-radius:24px;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;font-size:24px;line-height:1.35;touch-action:pan-y;box-shadow:0 10px 30px rgba(0,0,0,.18);overflow:hidden;user-select:none;cursor:grab;transition:transform .35s ease,opacity .35s ease}
 .card.drag{transition:none;cursor:grabbing}
-.card img,.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.card img,.thumb img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.card img.fg,.thumb img.fg{object-fit:contain}
+.card img.bg,.thumb img.bg{object-fit:cover;filter:blur(18px) brightness(.85);transform:scale(1.25)}
 .counter{color:var(--muted);font-size:13px;text-align:center}
 .hint{color:var(--muted);font-size:12px;text-align:center;margin-top:4px}
 
 /* botões */
 .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;font-size:16px;margin-bottom:10px;text-align:center}
 .btn.sec{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
-.fab{position:fixed;bottom:84px;right:max(20px,calc(50% - 200px));width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.3);z-index:6}
+.acoes{display:flex;align-items:center;gap:10px;width:320px;max-width:100%;margin-top:4px}
+.acoes .seta{flex:none;width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:22px}
+.acoes .add{flex:1;height:52px;border:0;border-radius:26px;background:var(--accent);color:#fff;font-weight:600;font-size:16px}
+.acoes button:active{transform:scale(.96)}
+@media (max-width:359px){.stack{width:288px;height:432px}.acoes{width:288px}}
 
 /* biblioteca */
 .grade{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .item-bib{display:flex;flex-direction:column;gap:8px}
-.thumb{position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;font-size:14px;line-height:1.3;background:var(--surface);border:1px solid var(--line)}
+.thumb{position:relative;aspect-ratio:2/3;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;font-size:14px;line-height:1.3;background:var(--surface);border:1px solid var(--line)}
 .thumb.quebrada{color:var(--muted);font-size:12px}
 .item-bib .tit{font-size:13px;text-align:center;color:var(--muted);min-height:16px}
 .item-bib button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:10px;padding:9px;font-weight:600}
@@ -48,7 +56,7 @@ nav button.on{color:var(--accent);font-weight:600}
 
 /* gerenciar */
 .linha{display:flex;gap:12px;align-items:center;padding:10px;background:var(--surface);border-radius:14px;margin-bottom:10px;border:1px solid var(--line)}
-.linha .thumb{width:44px;aspect-ratio:3/4;flex:none;border-radius:8px;padding:0;font-size:0;border:0}
+.linha .thumb{width:40px;aspect-ratio:2/3;flex:none;border-radius:8px;padding:0;font-size:0;border:0}
 .linha .t{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .linha button{border:0;background:none;font-size:18px;padding:6px}
 
@@ -70,7 +78,12 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
     <section id="tab-cartoes">
       <div class="stack" id="stack"></div>
       <div class="counter" id="counter"></div>
-      <div class="hint">Arraste o cartão ou use as setas ← →</div>
+      <div class="acoes">
+        <button class="seta" id="prev" aria-label="Passar para a esquerda">‹</button>
+        <button class="add" id="fab">+ Adicionar cartão</button>
+        <button class="seta" id="next" aria-label="Passar para a direita">›</button>
+      </div>
+      <div class="hint">Arraste o cartão para o lado ou use os botões</div>
     </section>
 
     <section id="tab-biblioteca" class="hidden">
@@ -91,7 +104,6 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
   </nav>
 
   <input type="file" id="arq" accept="image/*" class="sr">
-  <button class="fab" id="fab" aria-label="Adicionar cartão">+</button>
   <div class="modal hidden" id="modal"><div class="sheet" id="sheet"></div></div>
 </div>
 
@@ -121,9 +133,10 @@ function chave(it){return it.arquivo||it.texto}
 function visual(r,cls){ // desenha um cartão (texto ou imagem)
   var d=el('div',cls);
   if(r.tipo==='imagem'){
-    var i=el('img');i.alt='';i.src=r.url;
-    i.onerror=function(){d.classList.add('quebrada');i.remove();d.textContent='Imagem não encontrada: '+r.url};
-    d.appendChild(i);
+    var bg=el('img','bg');bg.alt='';bg.src=r.url;
+    var i=el('img','fg');i.alt='';i.src=r.url;
+    i.onerror=function(){d.classList.add('quebrada');bg.remove();i.remove();d.textContent='Imagem não encontrada: '+r.url};
+    d.appendChild(bg);d.appendChild(i);
   }else{d.textContent=r.texto;d.style.background=r.bg;d.style.color=r.cor;d.style.fontFamily=r.fonte}
   return d;
 }
@@ -134,7 +147,6 @@ function ir(nome){
   aba=nome;
   ['cartoes','biblioteca','gerenciar'].forEach(function(n){$('#tab-'+n).classList.toggle('hidden',n!==nome)});
   document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===nome)});
-  $('#fab').classList.toggle('hidden',nome!=='cartoes');
   window.scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){ir(b.dataset.tab)}});
@@ -186,6 +198,9 @@ document.addEventListener('keydown',function(e){
   if(e.key==='ArrowRight')sair(t,1);
   if(e.key==='ArrowLeft')sair(t,-1);
 });
+
+$('#prev').onclick=function(){var t=stack.lastChild;if(t&&t.classList.contains('card'))sair(t,-1)};
+$('#next').onclick=function(){var t=stack.lastChild;if(t&&t.classList.contains('card'))sair(t,1)};
 
 /* ---------- biblioteca ---------- */
 function achar(arquivo,cb){ // testa extensões comuns até achar a imagem
