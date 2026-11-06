@@ -13,7 +13,7 @@
    e pode causar o erro "Rate limit exceeded".
    =========================================================== */
 
-var QTD = 1;
+var QTD = 12;
 var EXTENSAO = "png";
 
 var BIBLIOTECA = [];
