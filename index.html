@@ -188,24 +188,50 @@ document.addEventListener('keydown',function(e){
 });
 
 /* ---------- biblioteca ---------- */
+function achar(arquivo,cb){ // testa extensões comuns até achar a imagem
+  var m=arquivo.match(/\.(\w+)$/),base=arquivo.replace(/\.\w+$/,'');
+  var exts=[m?m[1]:'png','png','jpg','jpeg','webp','PNG','JPG','JPEG'].filter(function(e,i,a){return a.indexOf(e)===i});
+  (function tenta(i){
+    if(i>=exts.length)return cb(null);
+    var im=new Image();
+    im.onload=function(){cb(base+'.'+exts[i])};
+    im.onerror=function(){tenta(i+1)};
+    im.src=base+'.'+exts[i];
+  })(0);
+}
 function renderBib(){
   var g=$('#grade');g.innerHTML='';
-  if(!lib.length){
-    var p=el('p','empty','A biblioteca ainda está vazia.');p.style.gridColumn='1 / -1';g.appendChild(p);return;
+  var pend=lib.length,achados=0;
+  function checa(){
+    if(pend===0&&achados===0&&!g.querySelector('.empty')){
+      var p=el('p','empty','A biblioteca ainda está vazia.');p.style.gridColumn='1 / -1';g.appendChild(p);
+    }
   }
+  if(!lib.length){checa();return}
   lib.forEach(function(it){
-    var k=chave(it),box=el('div','item-bib');
-    var r=it.arquivo?{tipo:'imagem',url:it.arquivo}:{tipo:'texto',texto:it.texto,bg:it.bg||'#6c5ce7',cor:it.cor||'#ffffff',fonte:it.fonte||'system-ui, sans-serif'};
-    box.appendChild(visual(r,'thumb'));
-    box.appendChild(el('div','tit',it.titulo||''));
-    var tem=fila.some(function(x){return x.origem===k});
-    var b=el('button',tem?'ok':'',tem?'✓ Adicionado':'Adicionar');
-    b.onclick=function(){
-      if(tem)fila=fila.filter(function(x){return x.origem!==k});
-      else{var n=JSON.parse(JSON.stringify(r));n.id=nextId++;n.origem=k;fila.unshift(n)}
-      salvar();tudo();
-    };
-    box.appendChild(b);g.appendChild(box);
+    var k=chave(it),box=el('div','item-bib hidden');g.appendChild(box);
+    function montar(r){
+      box.appendChild(visual(r,'thumb'));
+      box.appendChild(el('div','tit',it.titulo||''));
+      var tem=fila.some(function(x){return x.origem===k});
+      var b=el('button',tem?'ok':'',tem?'✓ Adicionado':'Adicionar');
+      b.onclick=function(){
+        if(tem)fila=fila.filter(function(x){return x.origem!==k});
+        else{var n=JSON.parse(JSON.stringify(r));n.id=nextId++;n.origem=k;fila.unshift(n)}
+        salvar();tudo();
+      };
+      box.appendChild(b);box.classList.remove('hidden');achados++;
+    }
+    if(it.arquivo){
+      achar(it.arquivo,function(url){
+        pend--;
+        if(url)montar({tipo:'imagem',url:url});else box.remove();
+        checa();
+      });
+    }else{
+      pend--;
+      montar({tipo:'texto',texto:it.texto,bg:it.bg||'#6c5ce7',cor:it.cor||'#ffffff',fonte:it.fonte||'system-ui, sans-serif'});
+    }
   });
 }
 
@@ -266,7 +292,16 @@ function importar(f){
   img.src=url;
 }
 
+/* remove dos "Meus cartões" imagens da biblioteca que não existem mais */
+function limpar(){
+  fila.filter(function(r){return r.tipo==='imagem'&&r.origem}).forEach(function(r){
+    var im=new Image();
+    im.onerror=function(){fila=fila.filter(function(x){return x.id!==r.id});salvar();tudo()};
+    im.src=r.url;
+  });
+}
 tudo();
+limpar();
 </script>
 </body>
 </html>
