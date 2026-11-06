@@ -8,6 +8,7 @@
 :root{--bg:#f4f1ec;--fg:#2b2a33;--muted:#7a7785;--accent:#6c5ce7;--surface:#fff;--line:rgba(43,42,51,.15)}
 @media (prefers-color-scheme:dark){:root{--bg:#17161c;--fg:#f1eff7;--muted:#9a97a8;--accent:#8f82ff;--surface:#24232c;--line:rgba(241,239,247,.18)}}
 *{box-sizing:border-box}
+html{overflow-x:hidden;width:100%}
 body{margin:0;min-height:100vh;min-height:100dvh;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;justify-content:center}
 button,label{font:inherit;cursor:pointer}
 .hidden{display:none!important}
@@ -27,12 +28,14 @@ nav button.on{color:var(--accent);font-weight:600}
 
 /* pilha de cartões */
 /* tamanho FIXO do cartão: não muda com o tamanho da janela */
-.stack{position:relative;flex:none;width:320px;height:480px;margin:16px auto 44px}
+.stack{position:relative;flex:none;width:320px;height:480px;margin:0}
 .card{position:absolute;inset:0;border-radius:24px;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;font-size:24px;line-height:1.35;touch-action:pan-y;box-shadow:0 10px 30px rgba(0,0,0,.18);overflow:hidden;user-select:none;cursor:grab;transition:transform .35s ease,opacity .35s ease}
 .card.drag{transition:none;cursor:grabbing}
 .card img,.thumb img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .card img.fg,.thumb img.fg{object-fit:contain}
 .card img.bg,.thumb img.bg{object-fit:cover;filter:blur(18px) brightness(.85);transform:scale(1.25)}
+.palco{width:100%;overflow:hidden;padding:16px 0 44px;display:flex;justify-content:center;touch-action:pan-y}
+.card{will-change:transform}
 .counter{color:var(--muted);font-size:13px;text-align:center}
 .hint{color:var(--muted);font-size:12px;text-align:center;margin-top:4px}
 
@@ -76,7 +79,7 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
 
   <main>
     <section id="tab-cartoes">
-      <div class="stack" id="stack"></div>
+      <div class="palco"><div class="stack" id="stack"></div></div>
       <div class="counter" id="counter"></div>
       <div class="acoes">
         <button class="seta" id="prev" aria-label="Passar para a esquerda">‹</button>
@@ -107,7 +110,7 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
   <div class="modal hidden" id="modal"><div class="sheet" id="sheet"></div></div>
 </div>
 
-<script src="biblioteca.js?v=2"></script>
+<script src="biblioteca.js"></script>
 <script>
 var KEY='reflexo_v1';
 var padrao=[
@@ -133,18 +136,29 @@ function chave(it){return it.arquivo||it.texto}
 function visual(r,cls){ // desenha um cartão (texto ou imagem)
   var d=el('div',cls);
   if(r.tipo==='imagem'){
-    var bg=el('img','bg');bg.alt='';bg.src=r.url;
-    var i=el('img','fg');i.alt='';i.src=r.url;
+    var bg=el('img','bg');bg.alt='';var i=el('img','fg');i.alt='';
+    if(cls==='thumb'){bg.loading='lazy';i.loading='lazy'}
+    bg.src=r.url;i.src=r.url;
     i.onerror=function(){d.classList.add('quebrada');bg.remove();i.remove();d.textContent='Imagem não encontrada: '+r.url};
     d.appendChild(bg);d.appendChild(i);
   }else{d.textContent=r.texto;d.style.background=r.bg;d.style.color=r.cor;d.style.fontFamily=r.fonte}
   return d;
 }
-function tudo(){render();renderBib();renderLista()}
+var pendente=false;
+function tudo(){ // atualiza só o que está na tela e mantém a posição da rolagem
+  var y=window.scrollY||document.documentElement.scrollTop||0;
+  marcar();
+  if(aba==='cartoes')render();else pendente=true;
+  if(aba==='gerenciar')renderLista();
+  window.scrollTo(0,y);
+}
 
 /* ---------- abas ---------- */
 function ir(nome){
   aba=nome;
+  if(nome==='biblioteca')construirBib();
+  if(nome==='cartoes'&&pendente){pendente=false;render()}
+  if(nome==='gerenciar')renderLista();
   ['cartoes','biblioteca','gerenciar'].forEach(function(n){$('#tab-'+n).classList.toggle('hidden',n!==nome)});
   document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===nome)});
   window.scrollTo(0,0);
@@ -203,52 +217,34 @@ $('#prev').onclick=function(){var t=stack.lastChild;if(t&&t.classList.contains('
 $('#next').onclick=function(){var t=stack.lastChild;if(t&&t.classList.contains('card'))sair(t,1)};
 
 /* ---------- biblioteca ---------- */
-function achar(arquivo,cb){ // testa extensões comuns até achar a imagem
-  var m=arquivo.match(/\.(\w+)$/),base=arquivo.replace(/\.\w+$/,'');
-  var exts=[m?m[1]:'png','png','jpg','jpeg','webp','PNG','JPG','JPEG'].filter(function(e,i,a){return a.indexOf(e)===i});
-  (function tenta(i){
-    if(i>=exts.length)return cb(null);
-    var im=new Image();
-    im.onload=function(){cb(base+'.'+exts[i])};
-    im.onerror=function(){tenta(i+1)};
-    im.src=base+'.'+exts[i];
-  })(0);
-}
-function renderBib(){
+var bibPronta=false,botoes=[];
+function construirBib(){ // monta a biblioteca UMA vez, só ao abrir a aba (poucos pedidos ao servidor)
+  if(bibPronta)return;bibPronta=true;
   var g=$('#grade');g.innerHTML='';
-  var pend=lib.length,achados=0;
-  function checa(){
-    if(pend===0&&achados===0&&!g.querySelector('.empty')){
-      var p=el('p','empty','A biblioteca ainda está vazia.');p.style.gridColumn='1 / -1';g.appendChild(p);
-    }
-  }
-  if(!lib.length){checa();return}
+  if(!lib.length){var p=el('p','empty','A biblioteca ainda está vazia.');p.style.gridColumn='1 / -1';g.appendChild(p);return}
   lib.forEach(function(it){
-    var k=chave(it),box=el('div','item-bib hidden');g.appendChild(box);
-    function montar(r){
-      box.appendChild(visual(r,'thumb'));
-      box.appendChild(el('div','tit',it.titulo||''));
+    var k=chave(it),box=el('div','item-bib');
+    var r=it.arquivo?{tipo:'imagem',url:it.arquivo}:{tipo:'texto',texto:it.texto,bg:it.bg||'#6c5ce7',cor:it.cor||'#ffffff',fonte:it.fonte||'system-ui, sans-serif'};
+    box.appendChild(visual(r,'thumb'));
+    box.appendChild(el('div','tit',it.titulo||''));
+    var b=el('button','','Adicionar');
+    b.onclick=function(){
       var tem=fila.some(function(x){return x.origem===k});
-      var b=el('button',tem?'ok':'',tem?'✓ Adicionado':'Adicionar');
-      b.onclick=function(){
-        if(tem)fila=fila.filter(function(x){return x.origem!==k});
-        else{var n=JSON.parse(JSON.stringify(r));n.id=nextId++;n.origem=k;fila.unshift(n)}
-        salvar();tudo();
-      };
-      box.appendChild(b);box.classList.remove('hidden');achados++;
-    }
-    if(it.arquivo){
-      achar(it.arquivo,function(url){
-        pend--;
-        if(url)montar({tipo:'imagem',url:url});else box.remove();
-        checa();
-      });
-    }else{
-      pend--;
-      montar({tipo:'texto',texto:it.texto,bg:it.bg||'#6c5ce7',cor:it.cor||'#ffffff',fonte:it.fonte||'system-ui, sans-serif'});
-    }
+      if(tem)fila=fila.filter(function(x){return x.origem!==k});
+      else{var n=JSON.parse(JSON.stringify(r));n.id=nextId++;n.origem=k;fila.unshift(n)}
+      salvar();tudo();
+    };
+    box.appendChild(b);g.appendChild(box);botoes.push({k:k,b:b});
+  });
+  marcar();
+}
+function marcar(){
+  botoes.forEach(function(x){
+    var tem=fila.some(function(y){return y.origem===x.k});
+    x.b.className=tem?'ok':'';x.b.textContent=tem?'✓ Adicionado':'Adicionar';
   });
 }
+function renderBib(){marcar()}
 
 /* ---------- gerenciar ---------- */
 function renderLista(){
