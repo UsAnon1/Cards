@@ -70,6 +70,11 @@ nav button.on{color:var(--accent);font-weight:600}
 textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;margin-bottom:12px;font-family:inherit}
 .row{display:flex;gap:10px;align-items:center;margin-bottom:12px}
 .row input[type=color]{width:56px;height:44px;padding:2px;border:0;background:none}
+.bloco{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:18px}
+.bloco h3{margin:0 0 4px;font-size:16px}
+.bloco .sub{margin:0 0 12px;text-align:left}
+.dupla{display:flex;gap:10px}
+.dupla .btn{flex:1;width:auto;margin-bottom:0;padding:12px 6px;font-size:14px}
 .sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 </style>
 </head>
@@ -95,6 +100,14 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
     </section>
 
     <section id="tab-gerenciar" class="hidden">
+      <div class="bloco">
+        <h3>Compartilhar meus cartões</h3>
+        <p class="sub">Exporte um arquivo e envie para outra pessoa. Ela importa aqui e recebe os seus cartões.</p>
+        <div class="dupla">
+          <button class="btn sec" id="exp">⬆️ Exportar</button>
+          <label class="btn sec" for="arqJson">⬇️ Importar</label>
+        </div>
+      </div>
       <p class="sub">Edite ou exclua os seus cartões.</p>
       <div id="lista"></div>
     </section>
@@ -107,6 +120,7 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
   </nav>
 
   <input type="file" id="arq" accept="image/*" class="sr">
+  <input type="file" id="arqJson" accept=".json,application/json" class="sr">
   <div class="modal hidden" id="modal"><div class="sheet" id="sheet"></div></div>
 </div>
 
@@ -302,6 +316,59 @@ function importar(f){
   img.onerror=function(){alert('Não consegui ler essa imagem. Tente um arquivo JPG ou PNG.')};
   img.src=url;
 }
+
+/* ---------- exportar / importar ---------- */
+var FONTES=['system-ui, sans-serif','Georgia, serif',"'Courier New', monospace",'cursive'];
+var HEX=/^#[0-9a-fA-F]{6}$/;
+$('#exp').onclick=function(){
+  if(!fila.length){alert('Você ainda não tem cartões para exportar.');return}
+  var blob=new Blob([JSON.stringify({app:'reflexo',versao:1,cartoes:fila})],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cartoes-de-enfrentamento.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
+};
+function limparItem(r){ // aceita só dados conhecidos e seguros do arquivo importado
+  if(!r||typeof r!=='object')return null;
+  var n={};
+  if(r.tipo==='texto'&&typeof r.texto==='string'&&r.texto.trim()){
+    n.tipo='texto';n.texto=r.texto.slice(0,500);
+    n.bg=HEX.test(r.bg)?r.bg:'#6c5ce7';n.cor=HEX.test(r.cor)?r.cor:'#ffffff';
+    n.fonte=FONTES.indexOf(r.fonte)>=0?r.fonte:FONTES[0];
+  }else if(r.tipo==='imagem'&&typeof r.url==='string'&&(/^data:image\/(jpeg|png|webp|gif);base64,/.test(r.url)||/^cartoes\/[\w\-.]+$/.test(r.url))){
+    n.tipo='imagem';n.url=r.url;
+  }else return null;
+  if(typeof r.origem==='string')n.origem=r.origem.slice(0,300);
+  return n;
+}
+function aplicar(novos,substituir){
+  var base=substituir?[]:fila,vistos={};
+  function ch(r){return r.tipo+'|'+(r.origem||r.url||r.texto)}
+  base.forEach(function(r){vistos[ch(r)]=1});
+  var add=novos.filter(function(r){var k=ch(r);if(vistos[k])return false;vistos[k]=1;return true});
+  add.forEach(function(r){r.id=nextId++});
+  fila=base.concat(add);
+  salvar();fechar();tudo();
+  alert(add.length+(add.length===1?' cartão adicionado.':' cartões adicionados.'));
+}
+$('#arqJson').addEventListener('change',function(){
+  var f=this.files&&this.files[0];this.value='';if(!f)return;
+  var rd=new FileReader();
+  rd.onerror=function(){alert('Não consegui ler o arquivo.')};
+  rd.onload=function(){
+    var d;try{d=JSON.parse(rd.result)}catch(e){return alert('Esse arquivo não é válido.')}
+    if(!d||d.app!=='reflexo'||!Array.isArray(d.cartoes))return alert('Esse arquivo não é um backup de Cartões de enfrentamento.');
+    var novos=d.cartoes.slice(0,500).map(limparItem).filter(Boolean);
+    if(!novos.length)return alert('Não encontrei cartões válidos nesse arquivo.');
+    abrir('<h2>Importar cartões</h2><p class="sub">Encontrei '+novos.length+(novos.length===1?' cartão':' cartões')+' no arquivo.</p>'+
+      '<button class="btn" id="iAdd">Adicionar aos meus cartões</button>'+
+      '<button class="btn sec" id="iSub">Substituir todos os meus cartões</button>'+
+      '<button class="btn sec" id="iCan">Cancelar</button>');
+    $('#iCan').onclick=fechar;
+    $('#iAdd').onclick=function(){aplicar(novos,false)};
+    $('#iSub').onclick=function(){if(confirm('Isso apaga os cartões que você tem agora. Continuar?'))aplicar(novos,true)};
+  };
+  rd.readAsText(f);
+});
 
 /* remove dos "Meus cartões" imagens da biblioteca que não existem mais */
 function limpar(){
