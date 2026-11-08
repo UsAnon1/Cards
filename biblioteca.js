@@ -18,7 +18,7 @@ var EXTENSAO = "png";
 
 var BIBLIOTECA = [];
 for (var i = 1; i <= QTD; i++) {
-  BIBLIOTECA.push({ arquivo: "cartoes/imagem" + i + "." + EXTENSAO, titulo: "" });
+  BIBLIOTECA.push({ arquivo: "Cartoes/imagem" + i + "." + EXTENSAO, titulo: "" });
 }
 
 /* Cartões de TEXTO prontos (opcional). Tire as barras // para usar:
