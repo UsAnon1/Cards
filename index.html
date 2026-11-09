@@ -87,11 +87,11 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
       <div class="palco"><div class="stack" id="stack"></div></div>
       <div class="counter" id="counter"></div>
       <div class="acoes">
-        <button class="seta" id="prev" aria-label="Passar para a esquerda">‹</button>
+        <button class="seta" id="prev" aria-label="Cartão anterior">‹</button>
         <button class="add" id="fab">+ Adicionar cartão</button>
-        <button class="seta" id="next" aria-label="Passar para a direita">›</button>
+        <button class="seta" id="next" aria-label="Próximo cartão">›</button>
       </div>
-      <div class="hint">Arraste o cartão para o lado ou use os botões</div>
+      <div class="hint">Arraste para a esquerda para avançar e para a direita para voltar</div>
     </section>
 
     <section id="tab-biblioteca" class="hidden">
@@ -196,12 +196,26 @@ function relayout(){
     c.style.transform='translateY('+pos*14+'px) scale('+(1-pos*0.05)+')';
   });
 }
-function sair(elc,dir){
-  if(animando||!fila.length)return;animando=true;
+function topo(){var t=stack.lastChild;return(t&&t.classList&&t.classList.contains('card'))?t:null}
+function avancar(elc){ // passa para o PRÓXIMO: o cartão do topo vai para o final da fila
+  if(animando||!fila.length)return;
+  elc=elc||topo();if(!elc)return;animando=true;
   elc.classList.remove('drag');
-  elc.style.transform='translateX('+dir*600+'px) rotate('+dir*25+'deg)';elc.style.opacity=0;
-  fila.push(fila.shift());salvar(); // o cartão do topo vai para o final da fila
+  elc.style.transform='translateX(-600px) rotate(-25deg)';elc.style.opacity=0;
+  fila.push(fila.shift());salvar();
   setTimeout(render,300);
+}
+function voltar(){ // volta para o ANTERIOR: o último da fila reaparece no topo
+  if(animando||fila.length<2)return;
+  fila.unshift(fila.pop());salvar();
+  render();animando=true;
+  var t=topo();if(!t)return;
+  t.style.transition='none';
+  t.style.transform='translateX(-600px) rotate(-25deg)';t.style.opacity=0;
+  void t.offsetWidth; // aplica o ponto de partida antes de animar
+  t.style.transition='';
+  t.style.transform='translateY(0) scale(1)';t.style.opacity=1;
+  setTimeout(function(){animando=false},350);
 }
 function bind(c){
   var sx=0,dx=0,on=false;
@@ -209,13 +223,15 @@ function bind(c){
   c.addEventListener('pointermove',function(e){
     if(!on)return;dx=e.clientX-sx;
     c.style.transform='translateX('+dx+'px) rotate('+dx/18+'deg)';
-    var p=Math.min(Math.abs(dx)/150,1),prev=c.previousSibling;
-    if(prev)prev.style.transform='translateY('+(14-14*p)+'px) scale('+(0.95+0.05*p)+')';
+    var prev=c.previousSibling;
+    if(prev&&dx<0){var p=Math.min(-dx/150,1);prev.style.transform='translateY('+(14-14*p)+'px) scale('+(0.95+0.05*p)+')'}
   });
   function fim(){
     if(!on)return;on=false;
-    if(Math.abs(dx)>90)sair(c,dx>0?1:-1);
-    else{c.classList.remove('drag');c.style.transform='translateY(0) scale(1)';relayout()}
+    c.classList.remove('drag');
+    if(dx<-90)avancar(c);                    // arrastou para a esquerda: próximo
+    else if(dx>90&&fila.length>1)voltar();   // arrastou para a direita: anterior
+    else{c.style.transform='translateY(0) scale(1)';relayout()}
     dx=0;
   }
   c.addEventListener('pointerup',fim);c.addEventListener('pointercancel',fim);
@@ -223,12 +239,12 @@ function bind(c){
 document.addEventListener('keydown',function(e){
   if(aba!=='cartoes'||!$('#modal').classList.contains('hidden'))return;
   var t=stack.lastChild;if(!t||!t.classList.contains('card'))return;
-  if(e.key==='ArrowRight')sair(t,1);
-  if(e.key==='ArrowLeft')sair(t,-1);
+  if(e.key==='ArrowLeft')avancar(t);
+  if(e.key==='ArrowRight')voltar();
 });
 
-$('#prev').onclick=function(){var t=stack.lastChild;if(t&&t.classList.contains('card'))sair(t,-1)};
-$('#next').onclick=function(){var t=stack.lastChild;if(t&&t.classList.contains('card'))sair(t,1)};
+$('#prev').onclick=function(){voltar()};
+$('#next').onclick=function(){avancar()};
 
 /* ---------- biblioteca ---------- */
 var bibPronta=false,botoes=[];
