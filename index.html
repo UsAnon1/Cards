@@ -180,69 +180,92 @@ function ir(nome){
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){ir(b.dataset.tab)}});
 
 /* ---------- pilha com swipe e loop ---------- */
+var elTopo=null,elVolta=null,camadas=[];
+function topo(){return elTopo}
+function posicionar(){
+  camadas.forEach(function(c,pos){c.style.transform='translateY('+pos*14+'px) scale('+(1-pos*0.05)+')'});
+}
 function render(){
-  stack.innerHTML='';animando=false;
+  stack.innerHTML='';animando=false;elTopo=elVolta=null;camadas=[];
   if(!fila.length){stack.appendChild(el('p','empty','Nenhum cartão ainda. Toque em + para criar ou visite a Biblioteca.'));$('#counter').textContent='';return}
-  fila.slice(0,3).reverse().forEach(function(r,i,arr){
-    var pos=arr.length-1-i,d=visual(r,'card');
-    d.style.transform='translateY('+pos*14+'px) scale('+(1-pos*0.05)+')';d.style.zIndex=10-pos;
-    stack.appendChild(d);
+  var vis=fila.slice(0,3);
+  vis.slice().reverse().forEach(function(r,i){
+    var pos=vis.length-1-i,d=visual(r,'card');
+    d.style.zIndex=10-pos;stack.appendChild(d);camadas[pos]=d;
   });
+  posicionar();
+  elTopo=camadas[0];
+  if(fila.length>1){ // o cartão ANTERIOR fica esperando fora da tela, à esquerda
+    elVolta=visual(fila[fila.length-1],'card');
+    elVolta.style.zIndex=30;elVolta.style.pointerEvents='none';
+    elVolta.style.transform='translateX(-130%) rotate(-12deg)';
+    stack.appendChild(elVolta);
+  }
   $('#counter').textContent=fila.length+(fila.length===1?' cartão':' cartões')+' em loop';
-  bind(stack.lastChild);
+  bind(elTopo);
 }
-function relayout(){
-  [].slice.call(stack.children).reverse().forEach(function(c,pos){
-    c.style.transform='translateY('+pos*14+'px) scale('+(1-pos*0.05)+')';
-  });
-}
-function topo(){var t=stack.lastChild;return(t&&t.classList&&t.classList.contains('card'))?t:null}
-function avancar(elc){ // passa para o PRÓXIMO: o cartão do topo vai para o final da fila
-  if(animando||!fila.length)return;
-  elc=elc||topo();if(!elc)return;animando=true;
+function avancar(elc){ // PRÓXIMO: o cartão do topo sai pela esquerda e vai para o final da fila
+  if(animando||!elTopo)return;
+  elc=elc||elTopo;animando=true;
   elc.classList.remove('drag');
   elc.style.transform='translateX(-600px) rotate(-25deg)';elc.style.opacity=0;
+  if(camadas[1])camadas[1].style.transform='translateY(0) scale(1)';
+  if(camadas[2])camadas[2].style.transform='translateY(14px) scale(.95)';
   fila.push(fila.shift());salvar();
-  setTimeout(render,300);
+  setTimeout(render,330);
 }
-function voltar(){ // volta para o ANTERIOR: o último da fila reaparece no topo
-  if(animando||fila.length<2)return;
+function voltar(){ // ANTERIOR: o cartão anterior desliza da esquerda para cima do atual
+  if(animando||!elTopo||!elVolta)return;
+  animando=true;
+  elTopo.classList.remove('drag');elVolta.classList.remove('drag');
+  elVolta.style.transform='translateY(0) scale(1)';
+  elTopo.style.transform='translateY(14px) scale(.95)';
+  if(camadas[1])camadas[1].style.transform='translateY(28px) scale(.9)';
   fila.unshift(fila.pop());salvar();
-  render();animando=true;
-  var t=topo();if(!t)return;
-  t.style.transition='none';
-  t.style.transform='translateX(-600px) rotate(-25deg)';t.style.opacity=0;
-  void t.offsetWidth; // aplica o ponto de partida antes de animar
-  t.style.transition='';
-  t.style.transform='translateY(0) scale(1)';t.style.opacity=1;
-  setTimeout(function(){animando=false},350);
+  setTimeout(render,350);
 }
 function bind(c){
   var sx=0,dx=0,on=false;
-  c.addEventListener('pointerdown',function(e){if(animando)return;on=true;sx=e.clientX;c.classList.add('drag');c.setPointerCapture(e.pointerId)});
+  c.addEventListener('pointerdown',function(e){
+    if(animando)return;
+    on=true;sx=e.clientX;dx=0;
+    c.classList.add('drag');if(elVolta)elVolta.classList.add('drag');
+    c.setPointerCapture(e.pointerId);
+  });
   c.addEventListener('pointermove',function(e){
     if(!on)return;dx=e.clientX-sx;
-    c.style.transform='translateX('+dx+'px) rotate('+dx/18+'deg)';
-    var prev=c.previousSibling;
-    if(prev&&dx<0){var p=Math.min(-dx/150,1);prev.style.transform='translateY('+(14-14*p)+'px) scale('+(0.95+0.05*p)+')'}
+    if(dx<=0){ // arrastando para a esquerda: próximo
+      c.style.transform='translateX('+dx+'px) rotate('+dx/18+'deg)';
+      var p=Math.min(-dx/150,1);
+      if(camadas[1])camadas[1].style.transform='translateY('+(14-14*p)+'px) scale('+(0.95+0.05*p)+')';
+      if(elVolta)elVolta.style.transform='translateX(-130%) rotate(-12deg)';
+    }else if(elVolta){ // arrastando para a direita: o anterior entra pela esquerda
+      var q=Math.min(dx/200,1);
+      elVolta.style.transform='translateX('+(-130*(1-q))+'%) rotate('+(-12*(1-q))+'deg)';
+      c.style.transform='translateY('+(14*q)+'px) scale('+(1-0.05*q)+')';
+      if(camadas[1])camadas[1].style.transform='translateY('+(14+14*q)+'px) scale('+(0.95-0.05*q)+')';
+    }else{
+      c.style.transform='translateX('+dx*0.2+'px)'; // só um cartão: resistência
+    }
   });
   function fim(){
     if(!on)return;on=false;
-    c.classList.remove('drag');
-    if(dx<-90)avancar(c);                    // arrastou para a esquerda: próximo
-    else if(dx>90&&fila.length>1)voltar();   // arrastou para a direita: anterior
-    else{c.style.transform='translateY(0) scale(1)';relayout()}
+    c.classList.remove('drag');if(elVolta)elVolta.classList.remove('drag');
+    if(dx<-90)avancar(c);
+    else if(dx>90&&elVolta)voltar();
+    else{ // não passou do limite: tudo volta ao lugar
+      posicionar();
+      if(elVolta)elVolta.style.transform='translateX(-130%) rotate(-12deg)';
+    }
     dx=0;
   }
   c.addEventListener('pointerup',fim);c.addEventListener('pointercancel',fim);
 }
 document.addEventListener('keydown',function(e){
   if(aba!=='cartoes'||!$('#modal').classList.contains('hidden'))return;
-  var t=stack.lastChild;if(!t||!t.classList.contains('card'))return;
-  if(e.key==='ArrowLeft')avancar(t);
+  if(e.key==='ArrowLeft')avancar();
   if(e.key==='ArrowRight')voltar();
 });
-
 $('#prev').onclick=function(){voltar()};
 $('#next').onclick=function(){avancar()};
 
