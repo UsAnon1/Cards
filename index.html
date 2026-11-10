@@ -494,23 +494,3 @@ limpar();
 </script>
 </body>
 </html>
-
-    $('#iAdd').onclick=function(){aplicar(novos,false)};
-    $('#iSub').onclick=function(){if(confirm('Isso apaga os cartões que você tem agora. Continuar?'))aplicar(novos,true)};
-  };
-  rd.readAsText(f);
-});
-
-/* remove dos "Meus cartões" imagens da biblioteca que não existem mais */
-function limpar(){
-  fila.filter(function(r){return r.tipo==='imagem'&&r.origem}).forEach(function(r){
-    var im=new Image();
-    im.onerror=function(){fila=fila.filter(function(x){return x.id!==r.id});salvar();tudo()};
-    im.src=r.url;
-  });
-}
-tudo();
-limpar();
-</script>
-</body>
-</html>
