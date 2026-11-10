@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cartões de enfrentamento</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icones/favicon-32.png">
+<link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
+<meta name="theme-color" content="#f4f1ec" id="metaTema">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cartões">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>try{var t=localStorage.getItem('reflexo_tema');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'escuro':'claro';document.documentElement.dataset.tema=t}catch(e){}</script>
 <style>
 :root{--bg:#f4f1ec;--fg:#2b2a33;--muted:#7a7785;--accent:#6c5ce7;--surface:#fff;--line:rgba(43,42,51,.15)}
@@ -238,8 +246,10 @@ function aplicarTema(t){
   document.documentElement.dataset.tema=t;
   try{localStorage.setItem('reflexo_tema',t)}catch(e){}
   $('#btnTema').setAttribute('aria-checked',t==='escuro');
+  $('#metaTema').setAttribute('content',t==='escuro'?'#17161c':'#f4f1ec');
 }
 $('#btnTema').setAttribute('aria-checked',document.documentElement.dataset.tema==='escuro');
+$('#metaTema').setAttribute('content',document.documentElement.dataset.tema==='escuro'?'#17161c':'#f4f1ec');
 $('#btnTema').onclick=function(){aplicarTema(document.documentElement.dataset.tema==='escuro'?'claro':'escuro')};
 
 /* ---------- pilha com swipe e loop ---------- */
