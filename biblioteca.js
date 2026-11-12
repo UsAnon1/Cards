@@ -4,5 +4,5 @@ var PADRAO = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // numero dos cart
 
 var BIBLIOTECA = [];
 for (var i = 1; i <= QTD; i++) {
-  BIBLIOTECA.push({ arquivo: "cartoes/imagem" + i + "." + EXTENSAO, titulo: "" });
+  BIBLIOTECA.push({ arquivo: "cartoes/" + i + "." + EXTENSAO, titulo: "" });
 }
