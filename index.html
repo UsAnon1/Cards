@@ -42,6 +42,7 @@ header h1{font-size:18px;margin:0;text-align:center}
 .menu{margin-top:20px}
 .grande{width:100%;padding:30px 22px;border-radius:22px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:20px;font-weight:600;display:flex;align-items:center;gap:16px;margin-bottom:16px;box-shadow:0 6px 18px rgba(0,0,0,.08);text-align:left}
 .grande span{font-size:34px}
+.grande span.psi{font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--accent);width:40px;text-align:center;line-height:1}
 .grande:active{transform:scale(.98)}
 main{flex:1;display:flex;flex-direction:column;padding-bottom:32px}
 section{flex:1;flex-direction:column;display:flex}
@@ -86,6 +87,14 @@ section{flex:1;flex-direction:column;display:flex}
 .linha .t{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .linha button{border:0;background:none;font-size:18px;padding:6px}
 
+/* respiração 4-7-8 */
+.resp{position:relative;display:flex;justify-content:center;align-items:center;height:300px;margin:8px 0 4px}
+.orbe{width:230px;height:230px;border-radius:50%;background:var(--accent);transform:scale(.55);transition:transform 1s ease-in-out;box-shadow:0 0 0 14px color-mix(in srgb,var(--accent) 18%,transparent),0 0 44px color-mix(in srgb,var(--accent) 40%,transparent)}
+.resp-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;pointer-events:none}
+.resp-txt #rFase{font-size:22px;font-weight:700}
+.resp-txt #rSeg{font-size:42px;font-weight:700;line-height:1.1;min-height:46px}
+.resp-info{text-align:center;color:var(--muted);margin-bottom:18px}
+
 /* janela */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:10}
 .sheet{background:var(--bg);width:100%;max-width:440px;border-radius:24px 24px 0 0;padding:24px;max-height:90vh;overflow:auto}
@@ -123,9 +132,21 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
       </div>
       <h1 class="titulo">Cartões de enfrentamento</h1>
       <div class="menu">
-        <button class="grande" data-ir="cartoes"><span> 🎴 </span>Meus cartões</button>
+        <button class="grande" data-ir="cartoes"><span class="psi" aria-hidden="true">Ψ</span>Meus cartões</button>
         <button class="grande" data-ir="biblioteca"><span>📚</span>Biblioteca</button>
+        <button class="grande" data-ir="respiracao"><span>🌬️</span>Respiração 4-7-8</button>
       </div>
+    </section>
+
+    <section id="tab-respiracao" class="hidden">
+      <p class="sub">Técnica 4-7-8: inspire pelo nariz por 4 segundos, segure por 7 e solte o ar pela boca por 8.</p>
+      <div class="resp">
+        <div class="orbe" id="orbe"></div>
+        <div class="resp-txt"><div id="rFase">Pronto</div><div id="rSeg"></div></div>
+      </div>
+      <div class="resp-info" id="rCiclos">Ciclos: 0</div>
+      <button class="btn" id="rBtn">Iniciar</button>
+      <p class="hint">Se sentir tontura, pare e volte a respirar normalmente.</p>
     </section>
 
     <section id="tab-cartoes" class="hidden">
@@ -178,7 +199,7 @@ var stack=$('#stack');
 function padraoInicial(){ // cartões que vêm de fábrica: imagens escolhidas em PADRAO (biblioteca.js)
   var nums=(typeof PADRAO!=='undefined'&&Array.isArray(PADRAO))?PADRAO:[],out=[];
   nums.forEach(function(n){
-    var it=lib.filter(function(x){return x.arquivo&&x.arquivo.indexOf('cartoes/imagem'+n+'.')===0})[0];
+    var it=lib.filter(function(x){return numDe(x)===+n})[0]; // acha pelo número do arquivo (9.png, imagem9.png...)
     if(it)out.push({id:nextId++,tipo:'imagem',url:it.arquivo,origem:chave(it)});
   });
   return out;
@@ -193,7 +214,8 @@ var AMOSTRAS=['Eu não preciso ter todas as respostas hoje.','O que eu posso faz
   if(sem.length!==fila.length){fila=sem.length?sem:padraoInicial();salvar()}
 })();
 var MOSTRAR_NUM=location.search.indexOf('numeros')>=0;
-function numero(it){var m=(it.arquivo||'').match(/imagem(\d+)/);return m?'Nº '+m[1]:''}
+function numDe(it){var m=(it.arquivo||'').match(/(\d+)\.\w+$/);return m?+m[1]:null}
+function numero(it){var n=numDe(it);return n!==null?'Nº '+n:''}
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
 function salvar(){
@@ -222,14 +244,15 @@ function tudo(){ // atualiza só o que está na tela e mantém a posição da ro
 }
 
 /* ---------- telas ---------- */
-var TITULOS={cartoes:'Meus cartões',biblioteca:'Biblioteca',gerenciar:'Configurações'};
+var TITULOS={cartoes:'Meus cartões',biblioteca:'Biblioteca',gerenciar:'Configurações',respiracao:'Respiração 4-7-8'};
 function ir(nome,volta){
   if(!volta&&nome!==aba&&nome!=='inicio'){try{history.pushState({tela:nome},'')}catch(e){}}
   aba=nome;
+  if(nome!=='respiracao')respParar();
   if(nome==='biblioteca')construirBib();
   if(nome==='cartoes'&&pendente){pendente=false;render()}
   if(nome==='gerenciar')renderLista();
-  ['inicio','cartoes','biblioteca','gerenciar'].forEach(function(n){$('#tab-'+n).classList.toggle('hidden',n!==nome)});
+  ['inicio','cartoes','biblioteca','gerenciar','respiracao'].forEach(function(n){$('#tab-'+n).classList.toggle('hidden',n!==nome)});
   $('#cab').classList.toggle('hidden',nome==='inicio');
   $('#cabTitulo').textContent=TITULOS[nome]||'';
   window.scrollTo(0,0);
@@ -490,6 +513,43 @@ $('#rest').onclick=function(){
   if(!confirm(temPadrao?'Substituir todos os seus cartões pelos cartões padrão?':'Apagar todos os seus cartões?'))return;
   fila=padraoInicial();salvar();tudo();
 };
+
+/* ---------- respiração 4-7-8 ---------- */
+var FASES=[{nome:'Inspire',seg:4,escala:1},{nome:'Segure',seg:7,escala:1},{nome:'Expire',seg:8,escala:0.55}];
+var resp={on:false,fase:0,t:null,ciclos:0,restante:0,trava:null};
+function respFase(){
+  var f=FASES[resp.fase],o=$('#orbe');
+  $('#rFase').textContent=f.nome;
+  o.style.transitionDuration=(f.nome==='Segure'?0:f.seg)+'s'; // o círculo cresce ao inspirar, fica parado ao segurar e encolhe ao expirar
+  o.style.transform='scale('+f.escala+')';
+  resp.restante=f.seg;$('#rSeg').textContent=resp.restante;
+  try{if(navigator.vibrate)navigator.vibrate(40)}catch(e){}
+}
+function respTick(){
+  resp.restante--;
+  if(resp.restante>0){$('#rSeg').textContent=resp.restante;return}
+  resp.fase++;
+  if(resp.fase>=FASES.length){resp.fase=0;resp.ciclos++;$('#rCiclos').textContent='Ciclos: '+resp.ciclos}
+  respFase();
+}
+function respIniciar(){
+  if(resp.on)return;
+  resp.on=true;resp.fase=0;resp.ciclos=0;$('#rCiclos').textContent='Ciclos: 0';
+  $('#rBtn').textContent='Parar';$('#rBtn').classList.add('sec');
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(w){resp.trava=w}).catch(function(){})}catch(e){}
+  respFase();
+  resp.t=setInterval(respTick,1000);
+}
+function respParar(){
+  if(!resp.on)return;
+  resp.on=false;clearInterval(resp.t);
+  try{if(resp.trava){resp.trava.release();resp.trava=null}}catch(e){}
+  $('#rBtn').textContent='Iniciar';$('#rBtn').classList.remove('sec');
+  var o=$('#orbe');o.style.transitionDuration='1s';o.style.transform='scale(0.55)';
+  $('#rFase').textContent='Pronto';$('#rSeg').textContent='';
+}
+$('#rBtn').onclick=function(){resp.on?respParar():respIniciar()};
+document.addEventListener('visibilitychange',function(){if(document.hidden)respParar()});
 
 /* remove dos "Meus cartões" imagens da biblioteca que não existem mais */
 function limpar(){
