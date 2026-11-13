@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#f4f1ec" id="metaTema">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Metamorfose">
+<meta name="apple-mobile-web-app-title" content="Cartões">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>try{var t=localStorage.getItem('reflexo_tema');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'escuro':'claro';document.documentElement.dataset.tema=t}catch(e){}</script>
 <style>
@@ -23,8 +23,8 @@ body{margin:0;min-height:100vh;min-height:100dvh;overflow-x:hidden;overscroll-be
 button,label{font:inherit;cursor:pointer}
 .hidden{display:none!important}
 .app{width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;padding:20px 20px 0}
-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:8px}
-header h1{font-size:18px;margin:0;text-align:center}
+header{display:grid;grid-template-columns:auto 1fr 72px;align-items:center;gap:6px;margin-bottom:8px}
+header h1{font-size:17px;margin:0;text-align:center;line-height:1.2}
 .voltar{justify-self:start;border:0;background:none;color:var(--accent);font-size:15px;font-weight:600;padding:8px 0}
 
 /* tela inicial */
@@ -38,8 +38,13 @@ header h1{font-size:18px;margin:0;text-align:center}
 :root[data-tema="escuro"] .tema .bola{transform:translateX(34px)}
 :root[data-tema="escuro"] .tema .sol{color:var(--muted)}
 :root[data-tema="escuro"] .tema .lua{color:#fff}
-.titulo{font-size:26px;text-align:center;margin:36px 0 8px;line-height:1.2}
-.menu{margin-top:20px}
+.logo{display:flex;justify-content:center;margin:14px 0 6px}
+.logo img{width:min(100%,300px);height:auto;display:block}
+.logo .l-escuro{display:none}
+:root[data-tema="escuro"] .logo .l-claro{display:none}
+:root[data-tema="escuro"] .logo .l-escuro{display:block}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.menu{margin-top:14px}
 .grande{width:100%;padding:30px 22px;border-radius:22px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:20px;font-weight:600;display:flex;align-items:center;gap:16px;margin-bottom:16px;box-shadow:0 6px 18px rgba(0,0,0,.08);text-align:left}
 .grande span{font-size:34px}
 .grande span.psi{font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--accent);width:40px;text-align:center;line-height:1}
@@ -113,7 +118,7 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
 <body>
 <div class="app">
   <header id="cab" class="hidden">
-    <button class="voltar" id="btnVoltar">← Início</button>
+    <button class="voltar" id="btnVoltar">← Voltar</button>
     <h1 id="cabTitulo"></h1>
     <span></span>
   </header>
@@ -130,11 +135,21 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
           <svg class="lua" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
       </div>
-      <h1 class="titulo">Cartões de enfrentamento</h1>
+      <h1 class="sr-only">Metamorfose</h1>
+      <div class="logo">
+        <img class="l-claro" src="logo-claro.png" alt="Metamorfose">
+        <img class="l-escuro" src="logo-escuro.png" alt="" aria-hidden="true">
+      </div>
+      <div class="menu">
+        <button class="grande" data-ir="menu"><span class="psi" aria-hidden="true">Ψ</span>Cartões de enfrentamento</button>
+        <button class="grande" data-ir="respiracao"><span>🌬️</span>Respiração 4-7-8</button>
+      </div>
+    </section>
+
+    <section id="tab-menu" class="hidden">
       <div class="menu">
         <button class="grande" data-ir="cartoes"><span class="psi" aria-hidden="true">Ψ</span>Meus cartões</button>
         <button class="grande" data-ir="biblioteca"><span>📚</span>Biblioteca</button>
-        <button class="grande" data-ir="respiracao"><span>🌬️</span>Respiração 4-7-8</button>
       </div>
     </section>
 
@@ -244,7 +259,7 @@ function tudo(){ // atualiza só o que está na tela e mantém a posição da ro
 }
 
 /* ---------- telas ---------- */
-var TITULOS={cartoes:'Meus cartões',biblioteca:'Biblioteca',gerenciar:'Configurações',respiracao:'Respiração 4-7-8'};
+var TITULOS={menu:'Cartões de enfrentamento',cartoes:'Meus cartões',biblioteca:'Biblioteca',gerenciar:'Configurações',respiracao:'Respiração 4-7-8'};
 function ir(nome,volta){
   if(!volta&&nome!==aba&&nome!=='inicio'){try{history.pushState({tela:nome},'')}catch(e){}}
   aba=nome;
@@ -252,7 +267,7 @@ function ir(nome,volta){
   if(nome==='biblioteca')construirBib();
   if(nome==='cartoes'&&pendente){pendente=false;render()}
   if(nome==='gerenciar')renderLista();
-  ['inicio','cartoes','biblioteca','gerenciar','respiracao'].forEach(function(n){$('#tab-'+n).classList.toggle('hidden',n!==nome)});
+  ['inicio','menu','cartoes','biblioteca','gerenciar','respiracao'].forEach(function(n){$('#tab-'+n).classList.toggle('hidden',n!==nome)});
   $('#cab').classList.toggle('hidden',nome==='inicio');
   $('#cabTitulo').textContent=TITULOS[nome]||'';
   window.scrollTo(0,0);
