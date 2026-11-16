@@ -104,7 +104,7 @@ section{flex:1;flex-direction:column;display:flex}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:10}
 .sheet{background:var(--bg);width:100%;max-width:440px;border-radius:24px 24px 0 0;padding:24px;max-height:90vh;overflow:auto}
 .sheet h2{margin:0 0 16px;font-size:20px}
-textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;margin-bottom:12px;font-family:inherit}
+textarea,select,input[type=password]{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;margin-bottom:12px;font-family:inherit}
 .row{display:flex;gap:10px;align-items:center;margin-bottom:12px}
 .row input[type=color]{width:56px;height:44px;padding:2px;border:0;background:none}
 .bloco{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:18px}
@@ -113,6 +113,11 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
 .dupla{display:flex;gap:10px}
 .dupla .btn{flex:1;width:auto;margin-bottom:0;padding:12px 6px;font-size:14px}
 .sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+
+/* mistério */
+.erro{color:#e5484d;font-size:14px;margin:-4px 0 12px}
+.segredo{white-space:pre-wrap;word-break:break-word;line-height:1.5;font-size:16px;margin:0 0 16px}
+.segredo-img{display:block;max-width:100%;height:auto;border-radius:16px;margin:0 auto 16px}
 </style>
 </head>
 <body>
@@ -194,6 +199,11 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
         <p class="sub" id="restP"></p>
         <button class="btn sec" id="rest" style="margin-bottom:0"></button>
       </div>
+      <div class="bloco">
+        <h3>Mistério</h3>
+        <p class="sub">Conteúdo protegido por senha.</p>
+        <button class="btn sec" id="btnMisterio" style="margin-bottom:0">🔒 Mistério</button>
+      </div>
       <p class="sub">Edite ou exclua os seus cartões.</p>
       <div id="lista"></div>
     </section>
@@ -206,6 +216,11 @@ textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(
 
 <script src="biblioteca.js"></script>
 <script>
+/* ===== MISTÉRIO: edite aqui ================================== */
+const SENHA_MISTERIO = "minhavida";
+const TEXTO_SECRETO = " Amor, não sei por onde começar, mas de uma coisa eu tenho certeza, que eu te amos muito. ❤️                       Eu sei que nem sempre demostro isso de um jeito carinhoso, e que às vezes te irrito, sou meio chato e pelo visto estresso você os 365 dias do ano... Mas tenha em mente que nunca é por querer, é só o meu jeito de te amar. Prometo que vou continuar melhorando por nós a partir da data de hoje.              Já são dois anos juntos, e quanta coisa a gente já passou, né? Passamos por muita história e muita aventura juntos. E espero que esses dois anos sejam apenas o começo de uma vida inteira ao seu lado. Quero conquistar tudo o que sonho na minha vida tendo você comigo para sempre.                                                Igor 💕";
+const IMAGEM_SECRETA = "misterio.png"; // caminho da imagem mostrada no final do texto (deixe "" para não mostrar)
+/* ============================================================= */
 var KEY='reflexo_v1';
 var lib=(typeof BIBLIOTECA!=='undefined'&&Array.isArray(BIBLIOTECA))?BIBLIOTECA:[];
 var nextId=Date.now(), animando=false, aba='inicio';
@@ -528,6 +543,37 @@ $('#rest').onclick=function(){
   if(!confirm(temPadrao?'Substituir todos os seus cartões pelos cartões padrão?':'Apagar todos os seus cartões?'))return;
   fila=padraoInicial();salvar();tudo();
 };
+
+/* ---------- mistério (senha + texto secreto) ---------- */
+function misterio(){
+  abrir('<h2>Mistério</h2><p class="sub" style="text-align:left">Digite a senha para continuar.</p>'+
+    '<input type="password" id="mSenha" placeholder="Senha" autocomplete="off">'+
+    '<p class="erro hidden" id="mErro" role="alert">Senha incorreta. Tente novamente.</p>'+
+    '<button class="btn" id="mOk">Confirmar</button>'+
+    '<button class="btn sec" id="mCan">Cancelar</button>');
+  var inp=$('#mSenha');
+  function conferir(){
+    if(inp.value===SENHA_MISTERIO){
+      abrir('<h2>Mistério</h2><p class="segredo" id="mTexto"></p><button class="btn" id="mFim">Fechar</button>');
+      $('#mTexto').textContent=TEXTO_SECRETO;
+      if(IMAGEM_SECRETA){ // imagem no final do texto; se o arquivo não existir, some sozinha
+        var im=el('img','segredo-img');im.alt='';im.src=IMAGEM_SECRETA;
+        im.onerror=function(){im.remove()};
+        $('#mTexto').insertAdjacentElement('afterend',im);
+      }
+      $('#mFim').onclick=fechar;
+    }else{
+      $('#mErro').classList.remove('hidden');
+      inp.value='';inp.focus();
+    }
+  }
+  $('#mOk').onclick=conferir;
+  $('#mCan').onclick=fechar;
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')conferir()});
+  inp.addEventListener('input',function(){$('#mErro').classList.add('hidden')});
+  setTimeout(function(){inp.focus()},50);
+}
+$('#btnMisterio').onclick=misterio;
 
 /* ---------- respiração 4-7-8 ---------- */
 var FASES=[{nome:'Inspire',seg:4,escala:1},{nome:'Segure',seg:7,escala:1},{nome:'Expire',seg:8,escala:0.55}];
